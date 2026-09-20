@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>회의록 · C레벨 지시이행관리 시스템</title>
+<style>
+  :root {
+    --primary: #2c5aa0;
+    --primary-dark: #1e3f73;
+    --accent: #e67e22;
+    --bg: #f4f6f9;
+    --card: #ffffff;
+    --border: #e1e5eb;
+    --text: #2c3e50;
+    --text-light: #7f8c8d;
+    --danger: #c0392b;
+    --warn: #d35400;
+    --ok: #27ae60;
+    --wait: #95a5a6;
+    --progress: #2980b9;
+    --hold: #8e44ad;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    line-height: 1.6;
+  }
+  header {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: #fff;
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  header h1 { margin: 0; font-size: 1.35em; }
+  header p { margin: 2px 0 0; font-size: 0.85em; opacity: 0.85; }
+  nav.tabs {
+    display: flex;
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    gap: 4px;
+    flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  nav.tabs button {
+    background: none;
+    border: none;
+    padding: 14px 18px;
+    font-size: 0.95em;
+    cursor: pointer;
+    color: var(--text-light);
+    border-bottom: 3px solid transparent;
+    font-weight: 600;
+  }
+  nav.tabs button.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+  }
+  main { max-width: 1200px; margin: 0 auto; padding: 24px; }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--card);
+    border-radius: 10px;
+    padding: 18px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    border-top: 4px solid var(--primary);
+  }
+  .stat-card .num { font-size: 1.8em; font-weight: 700; color: var(--primary-dark); }
+  .stat-card .label { font-size: 0.85em; color: var(--text-light); margin-top: 4px; }
+  .stat-card.danger { border-top-color: var(--danger); }
+  .stat-card.danger .num { color: var(--danger); }
+  .stat-card.ok { border-top-color: var(--ok); }
+  .stat-card.ok .num { color: var(--ok); }
+
+  .panel {
+    background: var(--card);
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .panel h2 { margin-top: 0; font-size: 1.1em; color: var(--primary-dark); }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; align-items: center; }
+  .toolbar input[type=text], .toolbar select, .toolbar input[type=date] {
+    padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9em;
+  }
+  .spacer { flex: 1; }
+  .btn {
+    background: var(--primary); color: #fff; border: none; border-radius: 6px;
+    padding: 9px 16px; font-size: 0.9em; cursor: pointer; font-weight: 600;
+  }
+  .btn:hover { background: var(--primary-dark); }
+  .btn.secondary { background: #fff; color: var(--primary); border: 1px solid var(--primary); }
+  .btn.danger { background: var(--danger); }
+  .btn.small { padding: 5px 10px; font-size: 0.8em; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+  th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--text-light); font-weight: 600; font-size: 0.85em; }
+  tr:hover { background: #f8fafc; }
+  td.actions { white-space: nowrap; }
+
+  .badge { display: inline-block; padding: 3px 9px; border-radius: 12px; font-size: 0.78em; font-weight: 700; color: #fff; }
+  .badge.status-대기 { background: var(--wait); }
+  .badge.status-진행중 { background: var(--progress); }
+  .badge.status-완료 { background: var(--ok); }
+  .badge.status-보류 { background: var(--hold); }
+  .badge.status-지연 { background: var(--danger); }
+  .badge.pri-긴급 { background: var(--danger); }
+  .badge.pri-높음 { background: var(--warn); }
+  .badge.pri-보통 { background: var(--progress); }
+  .badge.pri-낮음 { background: var(--wait); }
+  .overdue-text { color: var(--danger); font-weight: 700; }
+
+  .empty { text-align: center; color: var(--text-light); padding: 40px 0; }
+
+  .modal-backdrop {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+    align-items: center; justify-content: center; z-index: 100; padding: 20px;
+  }
+  .modal-backdrop.active { display: flex; }
+  .modal {
+    background: #fff; border-radius: 10px; padding: 24px; width: 100%; max-width: 560px;
+    max-height: 88vh; overflow-y: auto;
+  }
+  .modal h3 { margin-top: 0; color: var(--primary-dark); }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 0.85em; font-weight: 600; margin-bottom: 5px; color: var(--text); }
+  .field input, .field select, .field textarea {
+    width: 100%; padding: 9px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9em; font-family: inherit;
+  }
+  .field textarea { min-height: 70px; resize: vertical; }
+  .field-row { display: flex; gap: 12px; }
+  .field-row .field { flex: 1; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+
+  .history-list { list-style: none; padding: 0; margin: 10px 0 0; }
+  .history-list li { padding: 8px 0; border-bottom: 1px dashed var(--border); font-size: 0.85em; }
+  .history-list li:last-child { border-bottom: none; }
+  .history-list .h-meta { color: var(--text-light); font-size: 0.85em; }
+
+  .link-btn { background: none; border: none; color: var(--primary); cursor: pointer; text-decoration: underline; padding: 0; font-size: 0.9em; }
+
+  footer { text-align: center; color: var(--text-light); font-size: 0.8em; padding: 30px 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🗂️ 회의록 · C레벨 지시이행관리 시스템</h1>
+    <p>회의록을 기록하고, C레벨(임원) 지시사항을 등록·배정하여 이행 상태를 추적합니다.</p>
+  </div>
+  <div>
+    <button class="btn secondary" id="btnExport">데이터 내보내기</button>
+    <button class="btn secondary" id="btnImport">가져오기</button>
+    <input type="file" id="fileImport" accept="application/json" style="display:none">
+  </div>
+</header>
+
+<nav class="tabs">
+  <button data-view="dashboard" class="active">대시보드</button>
+  <button data-view="meetings">회의록</button>
+  <button data-view="directives">지시사항 이행관리</button>
+</nav>
+
+<main>
+
+  <!-- ===================== DASHBOARD ===================== -->
+  <section id="view-dashboard" class="view active">
+    <div class="stat-grid" id="statGrid"></div>
+
+    <div class="panel">
+      <h2>⏰ 마감 임박 / 지연 지시사항</h2>
+      <table>
+        <thead>
+          <tr><th>지시사항</th><th>지시자</th><th>담당자</th><th>마감일</th><th>상태</th></tr>
+        </thead>
+        <tbody id="dashUrgentBody"></tbody>
+      </table>
+      <div class="empty" id="dashUrgentEmpty" style="display:none;">임박하거나 지연된 지시사항이 없습니다.</div>
+    </div>
+
+    <div class="panel">
+      <h2>🗓️ 최근 회의록</h2>
+      <table>
+        <thead><tr><th>일자</th><th>회의명</th><th>참석자</th><th>생성된 지시사항</th></tr></thead>
+        <tbody id="dashRecentMeetings"></tbody>
+      </table>
+      <div class="empty" id="dashMeetingsEmpty" style="display:none;">등록된 회의록이 없습니다.</div>
+    </div>
+  </section>
+
+  <!-- ===================== MEETINGS ===================== -->
+  <section id="view-meetings" class="view">
+    <div class="toolbar">
+      <input type="text" id="meetingSearch" placeholder="회의명, 내용 검색">
+      <div class="spacer"></div>
+      <button class="btn" id="btnNewMeeting">+ 새 회의록</button>
+    </div>
+    <div class="panel">
+      <table>
+        <thead>
+          <tr><th>일자</th><th>회의명</th><th>구분</th><th>참석자</th><th>지시사항 수</th><th>작업</th></tr>
+        </thead>
+        <tbody id="meetingsBody"></tbody>
+      </table>
+      <div class="empty" id="meetingsEmpty" style="display:none;">등록된 회의록이 없습니다. '새 회의록'으로 추가하세요.</div>
+    </div>
+  </section>
+
+  <!-- ===================== DIRECTIVES ===================== -->
+  <section id="view-directives" class="view">
+    <div class="toolbar">
+      <input type="text" id="dirSearch" placeholder="지시사항 검색">
+      <select id="dirFilterStatus">
+        <option value="">전체 상태</option>
+        <option value="대기">대기</option>
+        <option value="진행중">진행중</option>
+        <option value="완료">완료</option>
+        <option value="보류">보류</option>
+        <option value="지연">지연</option>
+      </select>
+      <select id="dirFilterPriority">
+        <option value="">전체 우선순위</option>
+        <option value="긴급">긴급</option>
+        <option value="높음">높음</option>
+        <option value="보통">보통</option>
+        <option value="낮음">낮음</option>
+      </select>
+      <select id="dirFilterInstructor">
+        <option value="">전체 지시자</option>
+      </select>
+      <div class="spacer"></div>
+      <button class="btn" id="btnNewDirective">+ 새 지시사항</button>
+    </div>
+    <div class="panel">
+      <table>
+        <thead>
+          <tr>
+            <th>지시사항</th><th>지시자(직급)</th><th>담당자/부서</th><th>우선순위</th>
+            <th>마감일</th><th>상태</th><th>작업</th>
+          </tr>
+        </thead>
+        <tbody id="directivesBody"></tbody>
+      </table>
+      <div class="empty" id="directivesEmpty" style="display:none;">등록된 지시사항이 없습니다.</div>
+    </div>
+  </section>
+
+</main>
+
+<footer>회의록 · C레벨 지시이행관리 시스템 — 모든 데이터는 이 브라우저(localStorage)에만 저장됩니다. 정기적으로 '데이터 내보내기'로 백업하세요.</footer>
+
+<!-- ===================== MEETING MODAL ===================== -->
+<div class="modal-backdrop" id="meetingModalBackdrop">
+  <div class="modal">
+    <h3 id="meetingModalTitle">새 회의록</h3>
+    <input type="hidden" id="meetingId">
+    <div class="field-row">
+      <div class="field">
+        <label>회의 일자</label>
+        <input type="date" id="meetingDate">
+      </div>
+      <div class="field">
+        <label>회의 구분</label>
+        <select id="meetingType">
+          <option>경영회의</option>
+          <option>이사회</option>
+          <option>부서회의</option>
+          <option>프로젝트회의</option>
+          <option>기타</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>회의명</label>
+      <input type="text" id="meetingTitle" placeholder="예: 2026년 3분기 경영전략회의">
+    </div>
+    <div class="field">
+      <label>참석자 (쉼표로 구분)</label>
+      <input type="text" id="meetingAttendees" placeholder="예: 대표이사, CFO, 영업본부장">
+    </div>
+    <div class="field">
+      <label>회의 내용 / 안건</label>
+      <textarea id="meetingContent" placeholder="논의 내용, 결정 사항 등을 기록하세요"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn secondary" id="btnMeetingCancel">취소</button>
+      <button class="btn danger" id="btnMeetingDelete" style="display:none;">삭제</button>
+      <button class="btn" id="btnMeetingSave">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== DIRECTIVE MODAL ===================== -->
+<div class="modal-backdrop" id="directiveModalBackdrop">
+  <div class="modal">
+    <h3 id="directiveModalTitle">새 지시사항</h3>
+    <input type="hidden" id="directiveId">
+    <div class="field">
+      <label>지시사항 제목</label>
+      <input type="text" id="directiveTitle" placeholder="예: 3분기 원가절감 방안 수립">
+    </div>
+    <div class="field">
+      <label>상세 내용</label>
+      <textarea id="directiveDesc" placeholder="구체적인 지시 내용을 입력하세요"></textarea>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>지시자</label>
+        <input type="text" id="directiveInstructorName" placeholder="예: 홍길동">
+      </div>
+      <div class="field">
+        <label>지시자 직급</label>
+        <select id="directiveInstructorRole">
+          <option>대표이사(CEO)</option>
+          <option>CFO</option>
+          <option>COO</option>
+          <option>CTO</option>
+          <option>CMO</option>
+          <option>이사회</option>
+          <option>기타 임원</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>담당자</label>
+        <input type="text" id="directiveAssignee" placeholder="예: 김철수 팀장">
+      </div>
+      <div class="field">
+        <label>담당 부서</label>
+        <input type="text" id="directiveDept" placeholder="예: 경영지원팀">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>우선순위</label>
+        <select id="directivePriority">
+          <option>긴급</option>
+          <option>높음</option>
+          <option selected>보통</option>
+          <option>낮음</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>마감일</label>
+        <input type="date" id="directiveDue">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>상태</label>
+        <select id="directiveStatus">
+          <option>대기</option>
+          <option>진행중</option>
+          <option>완료</option>
+          <option>보류</option>
+          <option>지연</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>관련 회의록</label>
+        <select id="directiveMeetingLink">
+          <option value="">— 없음 —</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>이행 경과 메모 추가</label>
+      <textarea id="directiveNewNote" placeholder="상태 변경 사유, 진행 경과 등을 입력 후 저장하면 이력에 추가됩니다"></textarea>
+    </div>
+    <div id="directiveHistoryWrap" style="display:none;">
+      <label style="font-size:0.85em; font-weight:600;">이행 이력</label>
+      <ul class="history-list" id="directiveHistoryList"></ul>
+    </div>
+    <div class="modal-actions">
+      <button class="btn secondary" id="btnDirectiveCancel">취소</button>
+      <button class="btn danger" id="btnDirectiveDelete" style="display:none;">삭제</button>
+      <button class="btn" id="btnDirectiveSave">저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------------------------------------------------------------
+  // Data layer (localStorage backed)
+  // ---------------------------------------------------------------
+  const STORAGE_KEYS = { meetings: 'meetings_v1', directives: 'directives_v1' };
+
+  function loadList(key) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      console.error('데이터 로드 실패:', key, e);
+      return [];
+    }
+  }
+  function saveList(key, list) {
+    localStorage.setItem(key, JSON.stringify(list));
+  }
+  function uid() {
+    return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+  }
+  function todayStr() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  let meetings = loadList(STORAGE_KEYS.meetings);
+  let directives = loadList(STORAGE_KEYS.directives);
+
+  function persistMeetings() { saveList(STORAGE_KEYS.meetings, meetings); }
+  function persistDirectives() { saveList(STORAGE_KEYS.directives, directives); }
+
+  // ---------------------------------------------------------------
+  // Domain helpers
+  // ---------------------------------------------------------------
+  function isOverdue(d) {
+    return d.status !== '완료' && d.dueDate && d.dueDate < todayStr();
+  }
+  function effectiveStatus(d) {
+    return isOverdue(d) && d.status !== '지연' ? '지연' : d.status;
+  }
+  function directivesForMeeting(meetingId) {
+    return directives.filter((d) => d.meetingId === meetingId);
+  }
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[c]));
+  }
+
+  // ---------------------------------------------------------------
+  // Tab navigation
+  // ---------------------------------------------------------------
+  const tabButtons = document.querySelectorAll('nav.tabs button');
+  tabButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      tabButtons.forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
+      document.getElementById('view-' + btn.dataset.view).classList.add('active');
+      if (btn.dataset.view === 'dashboard') renderDashboard();
+      if (btn.dataset.view === 'meetings') renderMeetings();
+      if (btn.dataset.view === 'directives') renderDirectives();
+    });
+  });
+
+  // ---------------------------------------------------------------
+  // Dashboard
+  // ---------------------------------------------------------------
+  function renderDashboard() {
+    const total = directives.length;
+    const done = directives.filter((d) => d.status === '완료').length;
+    const inProgress = directives.filter((d) => d.status === '진행중').length;
+    const overdue = directives.filter(isOverdue).length;
+    const waiting = directives.filter((d) => d.status === '대기').length;
+
+    const statGrid = document.getElementById('statGrid');
+    statGrid.innerHTML = `
+      <div class="stat-card"><div class="num">${meetings.length}</div><div class="label">전체 회의록</div></div>
+      <div class="stat-card"><div class="num">${total}</div><div class="label">전체 지시사항</div></div>
+      <div class="stat-card"><div class="num">${waiting}</div><div class="label">대기중</div></div>
+      <div class="stat-card"><div class="num">${inProgress}</div><div class="label">진행중</div></div>
+      <div class="stat-card ok"><div class="num">${done}</div><div class="label">완료</div></div>
+      <div class="stat-card danger"><div class="num">${overdue}</div><div class="label">지연(마감 초과)</div></div>
+    `;
+
+    // 마감 임박(7일 이내) 또는 지연
+    const soon = new Date();
+    soon.setDate(soon.getDate() + 7);
+    const soonStr = soon.toISOString().slice(0, 10);
+    const urgent = directives
+      .filter((d) => d.status !== '완료' && d.dueDate && d.dueDate <= soonStr)
+      .sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''));
+
+    const body = document.getElementById('dashUrgentBody');
+    const empty = document.getElementById('dashUrgentEmpty');
+    if (urgent.length === 0) {
+      body.innerHTML = '';
+      empty.style.display = 'block';
+    } else {
+      empty.style.display = 'none';
+      body.innerHTML = urgent.map((d) => `
+        <tr>
+          <td>${escapeHtml(d.title)}</td>
+          <td>${escapeHtml(d.instructorName)} (${escapeHtml(d.instructorRole)})</td>
+          <td>${escapeHtml(d.assignee)} ${d.dept ? '/ ' + escapeHtml(d.dept) : ''}</td>
+          <td class="${isOverdue(d) ? 'overdue-text' : ''}">${d.dueDate || '-'}</td>
+          <td><span class="badge status-${effectiveStatus(d)}">${effectiveStatus(d)}</span></td>
+        </tr>
+      `).join('');
+    }
+
+    const recentMeetings = [...meetings].sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 8);
+    const mBody = document.getElementById('dashRecentMeetings');
+    const mEmpty = document.getElementById('dashMeetingsEmpty');
+    if (recentMeetings.length === 0) {
+      mBody.innerHTML = '';
+      mEmpty.style.display = 'block';
+    } else {
+      mEmpty.style.display = 'none';
+      mBody.innerHTML = recentMeetings.map((m) => `
+        <tr>
+          <td>${m.date || '-'}</td>
+          <td>${escapeHtml(m.title)}</td>
+          <td>${escapeHtml(m.attendees)}</td>
+          <td>${directivesForMeeting(m.id).length}건</td>
+        </tr>
+      `).join('');
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // Meetings view
+  // ---------------------------------------------------------------
+  function renderMeetings() {
+    const q = document.getElementById('meetingSearch').value.trim().toLowerCase();
+    const filtered = meetings
+      .filter((m) => !q || (m.title + m.content + m.attendees).toLowerCase().includes(q))
+      .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+    const body = document.getElementById('meetingsBody');
+    const empty = document.getElementById('meetingsEmpty');
+    if (filtered.length === 0) {
+      body.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+    body.innerHTML = filtered.map((m) => `
+      <tr>
+        <td>${m.date || '-'}</td>
+        <td>${escapeHtml(m.title)}</td>
+        <td>${escapeHtml(m.type)}</td>
+        <td>${escapeHtml(m.attendees)}</td>
+        <td>${directivesForMeeting(m.id).length}건</td>
+        <td class="actions">
+          <button class="btn small secondary" data-edit-meeting="${m.id}">편집</button>
+          <button class="btn small" data-add-directive-from="${m.id}">지시사항추가</button>
+        </td>
+      </tr>
+    `).join('');
+
+    body.querySelectorAll('[data-edit-meeting]').forEach((b) =>
+      b.addEventListener('click', () => openMeetingModal(b.dataset.editMeeting)));
+    body.querySelectorAll('[data-add-directive-from]').forEach((b) =>
+      b.addEventListener('click', () => openDirectiveModal(null, b.dataset.addDirectiveFrom)));
+  }
+
+  document.getElementById('meetingSearch').addEventListener('input', renderMeetings);
+  document.getElementById('btnNewMeeting').addEventListener('click', () => openMeetingModal(null));
+
+  function openMeetingModal(id) {
+    const backdrop = document.getElementById('meetingModalBackdrop');
+    const m = id ? meetings.find((x) => x.id === id) : null;
+    document.getElementById('meetingModalTitle').textContent = m ? '회의록 편집' : '새 회의록';
+    document.getElementById('meetingId').value = m ? m.id : '';
+    document.getElementById('meetingDate').value = m ? m.date : todayStr();
+    document.getElementById('meetingType').value = m ? m.type : '경영회의';
+    document.getElementById('meetingTitle').value = m ? m.title : '';
+    document.getElementById('meetingAttendees').value = m ? m.attendees : '';
+    document.getElementById('meetingContent').value = m ? m.content : '';
+    document.getElementById('btnMeetingDelete').style.display = m ? 'inline-block' : 'none';
+    backdrop.classList.add('active');
+  }
+  function closeMeetingModal() {
+    document.getElementById('meetingModalBackdrop').classList.remove('active');
+  }
+  document.getElementById('btnMeetingCancel').addEventListener('click', closeMeetingModal);
+  document.getElementById('meetingModalBackdrop').addEventListener('click', (e) => {
+    if (e.target.id === 'meetingModalBackdrop') closeMeetingModal();
+  });
+
+  document.getElementById('btnMeetingSave').addEventListener('click', () => {
+    const id = document.getElementById('meetingId').value;
+    const title = document.getElementById('meetingTitle').value.trim();
+    if (!title) { alert('회의명을 입력하세요.'); return; }
+    const data = {
+      id: id || uid(),
+      date: document.getElementById('meetingDate').value || todayStr(),
+      type: document.getElementById('meetingType').value,
+      title,
+      attendees: document.getElementById('meetingAttendees').value.trim(),
+      content: document.getElementById('meetingContent').value.trim(),
+    };
+    if (id) {
+      const idx = meetings.findIndex((x) => x.id === id);
+      meetings[idx] = data;
+    } else {
+      meetings.push(data);
+    }
+    persistMeetings();
+    closeMeetingModal();
+    renderMeetings();
+    renderDashboard();
+    refreshMeetingLinkOptions();
+  });
+
+  document.getElementById('btnMeetingDelete').addEventListener('click', () => {
+    const id = document.getElementById('meetingId').value;
+    if (!id) return;
+    const linked = directivesForMeeting(id).length;
+    const msg = linked > 0
+      ? `이 회의록에 연결된 지시사항이 ${linked}건 있습니다. 회의록만 삭제하고 지시사항은 유지할까요?`
+      : '이 회의록을 삭제하시겠습니까?';
+    if (!confirm(msg)) return;
+    meetings = meetings.filter((x) => x.id !== id);
+    persistMeetings();
+    closeMeetingModal();
+    renderMeetings();
+    renderDashboard();
+    refreshMeetingLinkOptions();
+  });
+
+  // ---------------------------------------------------------------
+  // Directives view
+  // ---------------------------------------------------------------
+  function refreshInstructorFilterOptions() {
+    const sel = document.getElementById('dirFilterInstructor');
+    const current = sel.value;
+    const names = [...new Set(directives.map((d) => d.instructorName).filter(Boolean))].sort();
+    sel.innerHTML = '<option value="">전체 지시자</option>' +
+      names.map((n) => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+    sel.value = current;
+  }
+  function refreshMeetingLinkOptions() {
+    const sel = document.getElementById('directiveMeetingLink');
+    const current = sel.value;
+    const sorted = [...meetings].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    sel.innerHTML = '<option value="">— 없음 —</option>' +
+      sorted.map((m) => `<option value="${m.id}">${escapeHtml(m.date)} · ${escapeHtml(m.title)}</option>`).join('');
+    sel.value = current;
+  }
+
+  function renderDirectives() {
+    refreshInstructorFilterOptions();
+    const q = document.getElementById('dirSearch').value.trim().toLowerCase();
+    const statusF = document.getElementById('dirFilterStatus').value;
+    const priorityF = document.getElementById('dirFilterPriority').value;
+    const instructorF = document.getElementById('dirFilterInstructor').value;
+
+    let filtered = directives.filter((d) => {
+      if (q && !(d.title + d.description + d.assignee).toLowerCase().includes(q)) return false;
+      if (statusF && effectiveStatus(d) !== statusF) return false;
+      if (priorityF && d.priority !== priorityF) return false;
+      if (instructorF && d.instructorName !== instructorF) return false;
+      return true;
+    });
+    filtered.sort((a, b) => (a.dueDate || '9999').localeCompare(b.dueDate || '9999'));
+
+    const body = document.getElementById('directivesBody');
+    const empty = document.getElementById('directivesEmpty');
+    if (filtered.length === 0) {
+      body.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+    body.innerHTML = filtered.map((d) => `
+      <tr>
+        <td><strong>${escapeHtml(d.title)}</strong>${d.meetingId ? '<br><span class="h-meta">📎 회의 연결됨</span>' : ''}</td>
+        <td>${escapeHtml(d.instructorName)}<br><span class="h-meta">${escapeHtml(d.instructorRole)}</span></td>
+        <td>${escapeHtml(d.assignee)}${d.dept ? '<br><span class="h-meta">' + escapeHtml(d.dept) + '</span>' : ''}</td>
+        <td><span class="badge pri-${d.priority}">${d.priority}</span></td>
+        <td class="${isOverdue(d) ? 'overdue-text' : ''}">${d.dueDate || '-'}</td>
+        <td><span class="badge status-${effectiveStatus(d)}">${effectiveStatus(d)}</span></td>
+        <td class="actions">
+          <button class="btn small secondary" data-edit-directive="${d.id}">편집</button>
+        </td>
+      </tr>
+    `).join('');
+
+    body.querySelectorAll('[data-edit-directive]').forEach((b) =>
+      b.addEventListener('click', () => openDirectiveModal(b.dataset.editDirective)));
+  }
+
+  ['dirSearch', 'dirFilterStatus', 'dirFilterPriority', 'dirFilterInstructor'].forEach((id) => {
+    document.getElementById(id).addEventListener('input', renderDirectives);
+    document.getElementById(id).addEventListener('change', renderDirectives);
+  });
+  document.getElementById('btnNewDirective').addEventListener('click', () => openDirectiveModal(null));
+
+  function openDirectiveModal(id, presetMeetingId) {
+    refreshMeetingLinkOptions();
+    const backdrop = document.getElementById('directiveModalBackdrop');
+    const d = id ? directives.find((x) => x.id === id) : null;
+    document.getElementById('directiveModalTitle').textContent = d ? '지시사항 편집' : '새 지시사항';
+    document.getElementById('directiveId').value = d ? d.id : '';
+    document.getElementById('directiveTitle').value = d ? d.title : '';
+    document.getElementById('directiveDesc').value = d ? d.description : '';
+    document.getElementById('directiveInstructorName').value = d ? d.instructorName : '';
+    document.getElementById('directiveInstructorRole').value = d ? d.instructorRole : '대표이사(CEO)';
+    document.getElementById('directiveAssignee').value = d ? d.assignee : '';
+    document.getElementById('directiveDept').value = d ? d.dept : '';
+    document.getElementById('directivePriority').value = d ? d.priority : '보통';
+    document.getElementById('directiveDue').value = d ? d.dueDate : '';
+    document.getElementById('directiveStatus').value = d ? d.status : '대기';
+    document.getElementById('directiveMeetingLink').value = d ? (d.meetingId || '') : (presetMeetingId || '');
+    document.getElementById('directiveNewNote').value = '';
+    document.getElementById('btnDirectiveDelete').style.display = d ? 'inline-block' : 'none';
+
+    const historyWrap = document.getElementById('directiveHistoryWrap');
+    const historyList = document.getElementById('directiveHistoryList');
+    if (d && d.history && d.history.length) {
+      historyWrap.style.display = 'block';
+      historyList.innerHTML = [...d.history].reverse().map((h) => `
+        <li>
+          <div><span class="badge status-${h.status}">${h.status}</span> ${escapeHtml(h.note || '')}</div>
+          <div class="h-meta">${h.date}</div>
+        </li>
+      `).join('');
+    } else {
+      historyWrap.style.display = 'none';
+      historyList.innerHTML = '';
+    }
+
+    backdrop.classList.add('active');
+  }
+  function closeDirectiveModal() {
+    document.getElementById('directiveModalBackdrop').classList.remove('active');
+  }
+  document.getElementById('btnDirectiveCancel').addEventListener('click', closeDirectiveModal);
+  document.getElementById('directiveModalBackdrop').addEventListener('click', (e) => {
+    if (e.target.id === 'directiveModalBackdrop') closeDirectiveModal();
+  });
+
+  document.getElementById('btnDirectiveSave').addEventListener('click', () => {
+    const id = document.getElementById('directiveId').value;
+    const title = document.getElementById('directiveTitle').value.trim();
+    if (!title) { alert('지시사항 제목을 입력하세요.'); return; }
+
+    const existing = id ? directives.find((x) => x.id === id) : null;
+    const newStatus = document.getElementById('directiveStatus').value;
+    const note = document.getElementById('directiveNewNote').value.trim();
+    const history = existing ? [...existing.history] : [];
+    const statusChanged = !existing || existing.status !== newStatus;
+    if (statusChanged || note) {
+      history.push({
+        date: new Date().toLocaleString('ko-KR'),
+        status: newStatus,
+        note: note || (existing ? '상태 변경' : '지시사항 등록'),
+      });
+    }
+
+    const data = {
+      id: id || uid(),
+      title,
+      description: document.getElementById('directiveDesc').value.trim(),
+      instructorName: document.getElementById('directiveInstructorName').value.trim(),
+      instructorRole: document.getElementById('directiveInstructorRole').value,
+      assignee: document.getElementById('directiveAssignee').value.trim(),
+      dept: document.getElementById('directiveDept').value.trim(),
+      priority: document.getElementById('directivePriority').value,
+      dueDate: document.getElementById('directiveDue').value,
+      status: newStatus,
+      meetingId: document.getElementById('directiveMeetingLink').value || null,
+      createdAt: existing ? existing.createdAt : new Date().toISOString(),
+      history,
+    };
+    if (id) {
+      const idx = directives.findIndex((x) => x.id === id);
+      directives[idx] = data;
+    } else {
+      directives.push(data);
+    }
+    persistDirectives();
+    closeDirectiveModal();
+    renderDirectives();
+    renderDashboard();
+    renderMeetings();
+  });
+
+  document.getElementById('btnDirectiveDelete').addEventListener('click', () => {
+    const id = document.getElementById('directiveId').value;
+    if (!id) return;
+    if (!confirm('이 지시사항을 삭제하시겠습니까?')) return;
+    directives = directives.filter((x) => x.id !== id);
+    persistDirectives();
+    closeDirectiveModal();
+    renderDirectives();
+    renderDashboard();
+    renderMeetings();
+  });
+
+  // ---------------------------------------------------------------
+  // Export / Import
+  // ---------------------------------------------------------------
+  document.getElementById('btnExport').addEventListener('click', () => {
+    const payload = { exportedAt: new Date().toISOString(), meetings, directives };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `directive-tracker-backup-${todayStr()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById('btnImport').addEventListener('click', () => {
+    document.getElementById('fileImport').click();
+  });
+  document.getElementById('fileImport').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const payload = JSON.parse(reader.result);
+        if (!Array.isArray(payload.meetings) || !Array.isArray(payload.directives)) {
+          throw new Error('형식이 올바르지 않습니다.');
+        }
+        if (!confirm('가져온 데이터로 현재 데이터를 대체합니다. 계속할까요?')) return;
+        meetings = payload.meetings;
+        directives = payload.directives;
+        persistMeetings();
+        persistDirectives();
+        renderDashboard();
+        renderMeetings();
+        renderDirectives();
+        alert('데이터를 가져왔습니다.');
+      } catch (err) {
+        alert('가져오기 실패: ' + err.message);
+      } finally {
+        e.target.value = '';
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  // ---------------------------------------------------------------
+  // Init
+  // ---------------------------------------------------------------
+  refreshMeetingLinkOptions();
+  renderDashboard();
+})();
+</script>
+</body>
+</html>
