@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>감정평가사 회계학 - 유형자산 비주얼 누적 노트</title>
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; line-height: 1.7; color: #333; max-width: 950px; margin: 40px auto; padding: 20px; background-color: #f4f6f9; }
+        h1 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; margin-bottom: 30px; }
+        .note-card { background: #fff; border-radius: 8px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 5px solid #3498db; }
+        .note-card h2 { color: #2980b9; margin-top: 0; font-size: 1.3em; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+        
+        /* 시각적 '와꾸' 다이어그램 박스 스타일 */
+        .wakku-box { background: #fdfefe; border: 2px dashed #3498db; border-radius: 6px; padding: 15px; margin: 15px 0; font-family: monospace; font-size: 0.95em; color: #2c3e50; white-space: pre-wrap; line-height: 1.5; }
+        
+        .qa-box { background: #fff9e6; border-left: 4px solid #f39c12; padding: 15px; margin-top: 15px; border-radius: 4px; }
+        .qa-box h3 { color: #d35400; margin-top: 0; font-size: 1.1em; }
+        .example-box { background: #e8f4fd; border-left: 4px solid #2980b9; padding: 15px; margin-top: 15px; border-radius: 4px; }
+        .example-box h4 { color: #2c3e50; margin-top: 0; }
+        ul { padding-left: 20px; }
+        li { margin-bottom: 8px; }
+        .warning { color: #c0392b; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>📚 감정평가사 회계학: 유형자산 비주얼 누적 노트</h1>
+    <p>지금까지 나눈 모든 상세 설명, 예시, 그리고 구조화된 '와꾸' 다이어그램이 누적된 관리 대장입니다.</p>
+
+    <!-- 1. 토지의 취득원가 -->
+    <div class="note-card">
+        <h2>1. 토지의 취득원가 및 취득 후 추가적 지출</h2>
+        <ul>
+            <li><strong>취득원가 산입 항목</strong>: 취득세 등 부대원가, 국공채 매입 초과액, 영구적 배수·조경비용, 국가 관리 진입도로 포장비 등은 토지원가에 산입합니다. (재산세는 당기비용이나, 체납 재산세 대납액은 건물 원가 포함)</li>
+            <li><strong>취득 이후 추가 지출 와꾸 구조</strong>:</li>
+        </ul>
+        <div class="wakku-box">
+[토지 취득 후 추가 지출 발생]
+ ├── 회사가 유지보수 책임 X (영구적 지출) ➔ 토지취득원가 가산 (Dep X)
+ └── 회사가 유지보수 책임 O (반영구적 지출) ➔ 구축물 계정 계상 (Dep O)</div>
+    </div>
+
+    <!-- 2. 토지와 건물 일괄구입 -->
+    <div class="note-card">
+        <h2>2. 토지와 건물의 일괄구입 및 철거 회계처리</h2>
+        <ul>
+            <li><strong>일괄구입 안분</strong>: 총 취득원가를 각각의 공정가치(FV) 비율로 안분합니다.</li>
+            <li><strong>철거 후 신축 구조 비교 와꾸</strong>:</li>
+        </ul>
+        <div class="wakku-box">
+[남의 건물 일괄구입 후 철거·신축]
+ ├── 토지원가 = 일괄구입원가 + 철거지출 - 폐자재매각수익 + 토지정지비용
+ └── 신축건물 = 건축비용 + 토지 굴착비용
+*(참고: 임시운용 수익은 별도 영업외수익 처리)
+
+[내 건물 보유 후 철거·신축]
+ ├── 기존건물 BV + 철거비용 ➔ 처분손실(비용) 즉시 인식
+ └── 신축건물원가 = 별도 신축건물 계정 계상</div>
+    </div>
+
+    <!-- 3. 국공채 매입 및 채권차금 -->
+    <div class="note-card">
+        <h2>3. 자산 취득과 관련하여 불가피하게 취득하는 국공채</h2>
+        <ul>
+            <li>강제 매입하는 국공채의 구입가격 중 공정가치를 초과하는 금액은 자산 취득 부대비용으로 유형자산 원가에 포함합니다.</li>
+        </ul>
+        <div class="qa-box">
+            <h3>💡 Q. 채권 차금이 뭐야?</h3>
+            <p>채권을 액면금액보다 낮은 공정가치로 취득했을 때 그 차액을 조정하기 위한 평가계정(채권할인발행차금)입니다. 채권 액면가에서 차감하는 형식으로 표시되며, 만기까지 유효이자율법을 통해 매년 상각되어 <strong>이자수익</strong>으로 전환됩니다.</p>
+        </div>
+    </div>
+
+    <!-- 4. 교환취득 -->
+    <div class="note-card">
+        <h2>4. 유형자산의 교환취득</h2>
+        <ul>
+            <li><strong>상업적 실질 O (현금흐름 변동 O)</strong>: 제공한 자산의 공정가치(FV) 기준. 장부금액(BV)과의 차이는 처분손익($FV - BV$)으로 즉시 인식합니다.</li>
+            <li><strong>상업적 실질 X (현금흐름 변동 X)</strong>: 처분손익 인식 안 함 ($0$). 제공한 자산의 장부금액(BV)을 그대로 이어서 신자산 취득원가로 가져옵니다.</li>
+        </ul>
+        <div class="example-box">
+            <h4>📊 [교환취득 구체적 예시]</h4>
+            <p><strong>가정</strong>: 구자산 BV = 600원 / 공정가치 FV = 800원</p>
+            <ul>
+                <li><strong>상업적 실질 O</strong>: 신자산 원가 800원 / 처분손익 = $\mathbf{+200원 (처분이익)}$</li>
+                <li><strong>상업적 실질 X</strong>: 신자산 원가 600원 (BV 그대로 인수) / 처분손익 = $\mathbf{0원}$</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 5. 복구원가 -->
+    <div class="note-card">
+        <h2>5. 복구원가와 복구충당부채</h2>
+        <ul>
+            <li><strong>최초 인식</strong>: 미래 복구비용의 현재가치를 구하여 복구충당부채를 잡고, 동시에 유형자산 원가에 가산합니다.</li>
+            <li><strong>후속 측정 및 정산 구조 와꾸</strong>:</li>
+        </ul>
+        <div class="wakku-box">
+[후속 측정]
+ ├── 유형자산 ➔ 내용연수 동안 매년 감가상각비 인식
+ └── 복구충당부채 ➔ 시간에 따라 이자비용(할인차금 상각) 인식하여 부채 증가
+
+[최종 정산 (실제 지출 시)]
+ ├── 실제지출액 > 장부부채 ➔ 복구공사손실 (비용)
+ └── 실제지출액 < 장부부채 ➔ 복구공사이익 (수익)</div>
+    </div>
+
+    <!-- 6. 재평가잉여금 -->
+    <div class="note-card">
+        <h2>6. 재평가모형과 재평가잉여금</h2>
+        <ul>
+            <li>유형자산을 재평가모형으로 측정할 때 가치 상승 시 기록하는 자본 항목입니다.</li>
+        </ul>
+        <div class="qa-box">
+            <h3>💡 Q. 재평가잉여금은 뭐야?</h3>
+            <p>자산 가치가 올랐다고 해서 당장 영업이익이나 당기순이익(N/I)으로 잡히지 않고, 손익계산서를 거치지 않은 채 <strong>기타포괄손익(OCI)</strong>을 거쳐 곧바로 <strong>자본(재평가잉여금)</strong>으로 직행하는 평가 이익 주머니입니다. 이후 가치 하락 시 기존 잉여금을 먼저 깎고 초과분만 당기손실로 잡습니다.</p>
+        </div>
+    </div>
+
+    <!-- 7. 복구충당부채 변경 및 정부보조금 -->
+    <div class="note-card">
+        <h2>7. 복구충당부채의 변경 및 정부보조금</h2>
+        <ul>
+            <li><strong>복구충당부채 변경 (원가모형)</strong>: 추정치·할인율 변경 시 증감액을 유형자산 장부금액에 가감합니다.
+                <br><span class="warning">⚠️ 한도 제한 규칙</span>: 부채 감소 시 자산 장부금액을 초과할 수 없으며, 초과분은 즉시 <strong>당기손익(N/I)</strong>으로 인식합니다.</li>
+            <li><strong>정부보조금</strong>: 조건 준수 + 수취에 대한 <strong>합리적 확신</strong>이 있을 때 인식합니다. (<span class="warning">❌ 오답 주의</span>: 현금 수령 시 인식한다는 지문은 틀림)</li>
+        </ul>
+    </div>
+
+</body>
+</html>
